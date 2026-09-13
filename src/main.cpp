@@ -16,6 +16,8 @@
 #include "player_sprite.h"
 #include "effect_sprite.h"
 #include "orbital_enemy_field.h"
+#include "orbital_sprite.h"
+#include "oam_sdl_bridge.h"
 
 const int LOGICAL_WIDTH = 320;
 const int LOGICAL_HEIGHT = 240;
@@ -224,6 +226,8 @@ int main(int argc, char* argv[]) {
     StageTextures stageTextures = LoadStageTextures(renderer, 0);
     PlayerSprites playerSprites = LoadPlayerSprites(renderer);  // 画像差し替え後は F5 で再読み込み
     EffectSprites effectSprites = LoadEffectSprites(renderer);  // 爆発 4 フレーム (F5 で再読み込み)
+    OamTileBank orbitalTiles;
+    LoadOrbitalTiles(renderer, orbitalTiles);
     struct EffectInstance { float x, y; int frame; int timer; };
     std::vector<EffectInstance> effects;
 
@@ -381,6 +385,8 @@ int main(int argc, char* argv[]) {
                         playerSprites = LoadPlayerSprites(renderer);
                         FreeEffectSprites(effectSprites);
                         effectSprites = LoadEffectSprites(renderer);
+                        orbitalTiles.Clear();
+                        LoadOrbitalTiles(renderer, orbitalTiles);
                     }
 
                     if (e.key.keysym.sym == SDLK_z) {
@@ -728,7 +734,7 @@ int main(int argc, char* argv[]) {
                     SDL_RenderFillRect(renderer, &eRect);
                 }
             }
-            orbitalEnemies.Render(renderer, frameCount);
+            orbitalEnemies.Render(renderer, frameCount, orbitalTiles);
             for (const auto& fx : effects) {
                 DrawEffectFrame(renderer, effectSprites, fx.frame, fx.x, fx.y, 2);
             }
@@ -788,6 +794,7 @@ int main(int argc, char* argv[]) {
 
     FreePlayerSprites(playerSprites);
     FreeEffectSprites(effectSprites);
+    orbitalTiles.Clear();
     DestroyStageTextures(stageTextures);
     SDL_CloseAudio();
     SDL_DestroyRenderer(renderer);

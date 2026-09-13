@@ -51,10 +51,9 @@ OrbitalShieldEnemy::OrbitalShieldEnemy(float centerX, float centerY, const Orbit
     core_->hp = tuning_.coreHp;
     core_->max_hp = tuning_.coreHp;
 
-    // 十字の上 / 左 / 下 (画面座標は +y が下なので 上 = 270 度)。右 (0 度) は空き枠
-    constexpr std::array<float, SHIELD_COUNT> kCrossPhases{kPi * 1.5f, kPi, kPi * 0.5f};
+    // Three Shields keep their original 120-degree phase spacing.
     for (int i = 0; i < SHIELD_COUNT; ++i) {
-        shieldPhaseOffsets_[i] = kCrossPhases[i];
+        shieldPhaseOffsets_[i] = i * kTwoPi / SHIELD_COUNT;
         shields_[i] = static_cast<boss::SinglePart*>(add_part(MakePart(tuning_.shieldCellSize, SHIELD_TILE_BASE, kShieldPlaceholder)));
     }
 

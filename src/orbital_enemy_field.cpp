@@ -54,13 +54,13 @@ bool OrbitalEnemyField::HitsPlayer(float px, float py, float pw, float ph) const
     return false;
 }
 
-void OrbitalEnemyField::Render(SDL_Renderer* renderer, uint32_t frameCount) const {
+void OrbitalEnemyField::Render(SDL_Renderer* renderer, uint32_t frameCount, const OamTileBank& tiles) const {
     if (impl_->enemies.empty()) return;
     boss::OAM oam;
     for (const auto& enemy : impl_->enemies) enemy->render(oam);
     oam.resolve_flicker(frameCount);
-    // 色と大きさは各部位の RenderUnit が持ち、OAMEntry 経由で届く (開発用プレースホルダー)
-    DrawOamPlaceholders(renderer, oam);
+    // OAM tile_id resolves to a canonical texture; missing tiles use the placeholder fallback.
+    DrawOamTiles(renderer, oam, tiles);
 }
 
 size_t OrbitalEnemyField::AliveCount() const { return impl_->enemies.size(); }

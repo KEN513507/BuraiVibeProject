@@ -19,6 +19,7 @@ add_executable(${PROJECT_NAME} src/main.cpp src/stage.cpp
     src/boss_entity.cpp
     src/orbital_shield_enemy.cpp
     src/orbital_enemy_field.cpp
+    src/orbital_sprite.cpp
     src/oam_sdl_bridge.cpp)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
@@ -30,7 +31,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL2main
 )
 
-# 蜊倅ｽ薙ユ繧ｹ繝育畑繧ｿ繝ｼ繧ｲ繝・ヨ縺ｮ螳夂ｾｩ
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/enemy_tests.cpp")
     add_executable(EnemyTests tests/enemy_tests.cpp src/enemy.cpp)
     target_compile_definitions(EnemyTests PRIVATE SDL_MAIN_HANDLED)
@@ -42,9 +42,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/orbital_shield_tests.cpp")
         src/orbital_shield_enemy.cpp src/multi_part_entity.cpp)
 endif()
 
+add_executable(OamTileTests tests/oam_tile_tests.cpp
+    src/oam_sdl_bridge.cpp src/orbital_sprite.cpp src/orbital_enemy_field.cpp
+    src/orbital_shield_enemy.cpp src/multi_part_entity.cpp)
+target_link_libraries(OamTileTests PRIVATE ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} mingw32)
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_CURRENT_SOURCE_DIR}/assets
     $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
 )
 
+# テスト実行時も最新アセットを使えるようにする
+foreach(test_target EnemyTests OamTileTests BgmTests)
+    if(TARGET ${test_target})
+        add_custom_command(TARGET ${test_target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/assets
+                $<TARGET_FILE_DIR:${test_target}>/assets)
+    endif()
+endforeach()

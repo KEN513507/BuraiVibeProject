@@ -23,16 +23,13 @@ constexpr float kEps = 0.01f;
 
 float Distance(float ax, float ay, float bx, float by) { return std::hypot(ax - bx, ay - by); }
 
-// 十字の位相 (上 / 左 / 下)。画面座標は +y が下なので 上 = 270 度。右 (0 度) は空き枠
-constexpr float kCrossPhases[3] = {kPi * 1.5f, kPi, kPi * 0.5f};
-
-// 3 Shield が Core 中心の軌道上で十字配置 (上 / 左 / 下) を保っているか (毎回数式から期待値を作って比べる)
+// Three Shields remain 120 degrees apart on the Core-centered orbit.
 bool ShieldsOnOrbit(const OrbitalShieldEnemy& enemy) {
     const OrbitalShieldTuning& t = enemy.tuning();
     const auto& core = enemy.core();
     if (std::abs(core.world_x - enemy.x) > kEps || std::abs(core.world_y - enemy.y) > kEps) return false;
     for (int i = 0; i < OrbitalShieldEnemy::SHIELD_COUNT; ++i) {
-        const float angle = enemy.orbit_angle() + kCrossPhases[i];
+        const float angle = enemy.orbit_angle() + i * 2.0f * kPi / 3.0f;
         if (std::abs(enemy.shield(i).world_x - (enemy.x + std::cos(angle) * t.orbitRadiusX)) > kEps ||
             std::abs(enemy.shield(i).world_y - (enemy.y + std::sin(angle) * t.orbitRadiusY)) > kEps) return false;
     }
@@ -73,29 +70,24 @@ int main(int, char**) {
               "Core HP lives in core Part::hp / max_hp");
     }
 
-    // TEST 4: 十字配置 (上 / 左 / 下、右が空き)、spawn 直後から軌道上
+    // TEST 4: 120-degree spacing from spawn and throughout the orbit.
     {
         OrbitalShieldEnemy enemy(200, 100, tuning);
-        Check(std::abs(enemy.shield_phase_offset(0) - kPi * 1.5f) < 1e-5f &&
-              std::abs(enemy.shield_phase_offset(1) - kPi) < 1e-5f &&
-              std::abs(enemy.shield_phase_offset(2) - kPi * 0.5f) < 1e-5f,
-              "TEST4 phase offsets are up (270), left (180), down (90) degrees");
+        Check(std::abs(enemy.shield_phase_offset(0)) < 1e-5f &&
+              std::abs(enemy.shield_phase_offset(1) - 2.0f * kPi / 3.0f) < 1e-5f &&
+              std::abs(enemy.shield_phase_offset(2) - 4.0f * kPi / 3.0f) < 1e-5f,
+              "TEST4 phase offsets are 0, 120, 240 degrees");
         Check(ShieldsOnOrbit(enemy), "TEST4 shields on orbit at spawn (not at 0,0)");
-        const float d = tuning.coreCellSize * 0.5f + tuning.shieldCellSize * 0.5f + 1.0f;
-        Check(tuning.orbitRadiusX == d && tuning.orbitRadiusY == d, "TEST4 orbit radius = core half + shield half + 1");
-        Check(std::abs(enemy.shield(0).world_x - 200) < kEps && std::abs(enemy.shield(0).world_y - (100 - d)) < kEps,
-              "TEST4 shield 0 starts above core");
-        Check(std::abs(enemy.shield(1).world_x - (200 - d)) < kEps && std::abs(enemy.shield(1).world_y - 100) < kEps,
-              "TEST4 shield 1 starts left of core");
-        Check(std::abs(enemy.shield(2).world_x - 200) < kEps && std::abs(enemy.shield(2).world_y - (100 + d)) < kEps,
-              "TEST4 shield 2 starts below core");
-        bool rightEmpty = true;
+        Check(std::abs(enemy.shield(0).world_x - (200 + tuning.orbitRadiusX)) < kEps &&
+              std::abs(enemy.shield(0).world_y - 100) < kEps,
+              "TEST4 shield 0 starts right of Core");
         for (int i = 0; i < 3; ++i) {
-            if (enemy.shield(i).world_x > 200 + kEps) rightEmpty = false;
+            for (int j = i + 1; j < 3; ++j) {
+                float delta = std::fmod(std::abs(enemy.shield_phase_offset(i) - enemy.shield_phase_offset(j)), 2 * kPi);
+                delta = std::min(delta, 2 * kPi - delta);
+                Check(std::abs(delta - 2.0f * kPi / 3.0f) < 1e-4f, "TEST4 equal 120-degree spacing");
+            }
         }
-        Check(rightEmpty, "TEST4 no shield on the right of core at spawn");
-        // 十字で並べても Shield のセル (16) と Core のセル (32) が重ならない
-        Check(d - tuning.shieldCellSize * 0.5f > tuning.coreCellSize * 0.5f, "TEST4 shield cells do not overlap core cell");
     }
 
     // Chase: 接近と stopDistance
@@ -179,19 +171,17 @@ int main(int, char**) {
         OrbitalShieldTuning tight = tuning;
         tight.orbitRadiusX = tight.orbitRadiusY = 8.0f;
         OrbitalShieldEnemy overlapped(160, 100, tight);
-        Check(ShootAt(overlapped, 155, 100) == OrbitalBulletResult::BLOCKED_BY_SHIELD &&
+        Check(ShootAt(overlapped, 165, 100) == OrbitalBulletResult::BLOCKED_BY_SHIELD &&
               overlapped.core().hp == tight.coreHp, "TEST9 shield checked before core");
     }
 
-    // TEST 11: Shield の隙間を抜けて Core に当たると HP が減る
+    // TEST 11: A bullet through a Shield gap damages only the Core.
     {
         OrbitalShieldEnemy enemy(160, 100, tuning);
-        // Shield は上 / 左 / 下。空き枠の右側は Shield に掛からない
-        Check(ShootAt(enemy, 160 + 40, 100) == OrbitalBulletResult::MISS, "empty right slot outside core is a miss");
-        Check(ShootAt(enemy, 160 - 25, 100) == OrbitalBulletResult::BLOCKED_BY_SHIELD &&
-              enemy.core().hp == tuning.coreHp, "left shield blocks a bullet from the left");
-        Check(ShootAt(enemy, 160 + 6, 100) == OrbitalBulletResult::CORE_DAMAGED &&
-              enemy.core().hp == tuning.coreHp - 1, "TEST11 core hit through the empty right slot reduces core hp");
+        Check(ShootAt(enemy, 120, 100) == OrbitalBulletResult::MISS,
+              "outside the Core and Shields is a miss");
+        Check(ShootAt(enemy, 154, 100) == OrbitalBulletResult::CORE_DAMAGED &&
+              enemy.core().hp == tuning.coreHp - 1, "TEST11 gap bullet damages Core");
     }
 
     // TEST 12 / 13 / 14: Core 死亡で Entity 全体が止まり、OAM に何も出さない

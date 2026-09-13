@@ -7,6 +7,7 @@
 #include "orbital_bullet_result.h"
 
 struct SDL_Renderer;
+class OamTileBank;
 
 // ゲーム内の OrbitalShieldEnemy を持つ入れ物。
 // entity.h (class Entity) をこのヘッダに出さないので、main.cpp の struct Entity と衝突しない。
@@ -31,7 +32,7 @@ public:
     bool HitsPlayer(float px, float py, float pw, float ph) const;
 
     // OAM に積み、flicker を解決してから SDL ブリッジで描く
-    void Render(SDL_Renderer* renderer, uint32_t frameCount) const;
+    void Render(SDL_Renderer* renderer, uint32_t frameCount, const OamTileBank& tiles) const;
 
     size_t AliveCount() const;
 
