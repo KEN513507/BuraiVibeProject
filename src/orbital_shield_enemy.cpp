@@ -51,9 +51,10 @@ OrbitalShieldEnemy::OrbitalShieldEnemy(float centerX, float centerY, const Orbit
     core_->hp = tuning_.coreHp;
     core_->max_hp = tuning_.coreHp;
 
+    // 十字の上 / 左 / 下 (画面座標は +y が下なので 上 = 270 度)。右 (0 度) は空き枠
+    constexpr std::array<float, SHIELD_COUNT> kCrossPhases{kPi * 1.5f, kPi, kPi * 0.5f};
     for (int i = 0; i < SHIELD_COUNT; ++i) {
-        // 3 個を 0 / 120 / 240 度の等間隔に置く
-        shieldPhaseOffsets_[i] = i * kTwoPi / SHIELD_COUNT;
+        shieldPhaseOffsets_[i] = kCrossPhases[i];
         shields_[i] = static_cast<boss::SinglePart*>(add_part(MakePart(tuning_.shieldCellSize, SHIELD_TILE_BASE, kShieldPlaceholder)));
     }
 
@@ -148,6 +149,16 @@ OrbitalBulletResult OrbitalShieldEnemy::resolve_player_bullet(float bx, float by
         return OrbitalBulletResult::CORE_DESTROYED;
     }
     return OrbitalBulletResult::CORE_DAMAGED;
+}
+
+bool OrbitalShieldEnemy::overlaps_player(float px, float py, float pw, float ph) const {
+    if (!active) return false;
+    for (const auto* shield : shields_) {
+        if (OverlapsCentered(px, py, pw, ph, shield->world_x, shield->world_y,
+                             tuning_.shieldHitboxWidth, tuning_.shieldHitboxHeight)) return true;
+    }
+    return OverlapsCentered(px, py, pw, ph, core_->world_x, core_->world_y,
+                            tuning_.coreHitboxWidth, tuning_.coreHitboxHeight);
 }
 
 void OrbitalShieldEnemy::cull_if_offscreen(int cameraX, int cameraY, int viewWidth, int viewHeight) {

@@ -7,12 +7,14 @@
 #include <cctype>
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 #include "stage1_score.h"
 #include "stage.h"
 #include "direction8.h"
 #include "enemy_bullet.h"
 #include "lethal.h"
 #include "player_sprite.h"
+#include "effect_sprite.h"
 #include "orbital_enemy_field.h"
 
 const int LOGICAL_WIDTH = 320;
@@ -21,8 +23,37 @@ const int WINDOW_WIDTH = 960;
 const int WINDOW_HEIGHT = 720;
 const int PLAY_AREA_HEIGHT = 204;
 
-enum GameState { TITLE, PLAYING, PAUSED_DEATH, GAME_OVER };
+enum GameState { TITLE, PLAYING, PAUSED_DEATH, GAME_OVER, SOUND_TEST };
 enum WeaponType { WEAPON_LASER, WEAPON_RING, WEAPON_MISSILE };
+
+// ============================================================
+// Sound Test 状態管理
+// ============================================================
+struct SoundTestState {
+    static constexpr int TRACK_COUNT = 10;
+    int  selected    = 1;      // 初期選択は Stage 1
+    bool playing     = false;
+    int  step        = 0;      // 現在の16分音符ステップ
+    int  frameInStep = 0;      // 0..4 (STAGE1_FRAMES_PER_TICK 依存)
+
+    static const char* TrackName(int i) {
+        static const char* names[TRACK_COUNT] = {
+            "TITLE",
+            "STAGE 1",
+            "STAGE 2",
+            "MAZE",
+            "STAGE 3",
+            "BOSS",
+            "STAGE 4",
+            "STAGE 5",
+            "LAST STAGE",
+            "GAME OVER"
+        };
+        return (i >= 0 && i < TRACK_COUNT) ? names[i] : "???";
+    }
+
+    bool IsPlayable(int i) const { return i == 1; } // Phase 1 は Stage 1 のみ再生可能
+};
 
 struct PlayerBullet {
     float x, y;
@@ -192,8 +223,12 @@ int main(int argc, char* argv[]) {
     InitHazardsForStage(stageMap, StageTheme::ALIEN_BASE_ORGANIC_MECH);
     StageTextures stageTextures = LoadStageTextures(renderer, 0);
     PlayerSprites playerSprites = LoadPlayerSprites(renderer);  // 画像差し替え後は F5 で再読み込み
+    EffectSprites effectSprites = LoadEffectSprites(renderer);  // 爆発 4 フレーム (F5 で再読み込み)
+    struct EffectInstance { float x, y; int frame; int timer; };
+    std::vector<EffectInstance> effects;
 
     GameState state = TITLE;
+    SoundTestState soundTest;
     WeaponType currentWeapon = WEAPON_RING;
 
     int score = 0;
@@ -247,6 +282,7 @@ int main(int argc, char* argv[]) {
                     return false;
                 }
             }
+            if (orbitalEnemies.HitsPlayer(cx, cy, player.width, player.height)) return false;
             // 2) 地形（壁）との重なり
             if (CheckStageCollision(stageMap, cx, cy, player.width, player.height)) return false;
 
@@ -294,6 +330,46 @@ int main(int argc, char* argv[]) {
                         spawnEnemies(4);
                         bgmStep = 0;
                         state = PLAYING;
+                    } else if (e.key.keysym.sym == SDLK_s) {
+                        state = SOUND_TEST;
+                        soundTest.selected = 1;
+                        soundTest.playing = false;
+                        soundTest.step = 0;
+                        soundTest.frameInStep = 0;
+                        bgmStep = 0;
+                    }
+                } else if (state == SOUND_TEST) {
+                    switch (e.key.keysym.sym) {
+                        case SDLK_UP:
+                            soundTest.selected = (soundTest.selected + SoundTestState::TRACK_COUNT - 1) % SoundTestState::TRACK_COUNT;
+                            break;
+                        case SDLK_DOWN:
+                            soundTest.selected = (soundTest.selected + 1) % SoundTestState::TRACK_COUNT;
+                            break;
+                        case SDLK_z:
+                            if (soundTest.IsPlayable(soundTest.selected)) {
+                                soundTest.playing     = true;
+                                soundTest.step        = 0;
+                                soundTest.frameInStep = 0;
+                                bgmStep               = 0;
+                            }
+                            break;
+                        case SDLK_x:
+                            soundTest.playing = false;
+                            g_apu.bgmPulse1Freq = 0.0f;
+                            g_apu.bgmPulse2Freq = 0.0f;
+                            g_apu.bgmTriangleFreq = 0.0f;
+                            g_apu.bgmNoiseTrigger = false;
+                            break;
+                        case SDLK_ESCAPE:
+                            state             = TITLE;
+                            soundTest.playing = false;
+                            g_apu.bgmPulse1Freq = 0.0f;
+                            g_apu.bgmPulse2Freq = 0.0f;
+                            g_apu.bgmTriangleFreq = 0.0f;
+                            g_apu.bgmNoiseTrigger = false;
+                            break;
+                        default: break;
                     }
                 } else if (state == PLAYING) {
                     if (e.key.keysym.sym == SDLK_1) currentWeapon = WEAPON_LASER;
@@ -303,6 +379,8 @@ int main(int argc, char* argv[]) {
                     if (e.key.keysym.sym == SDLK_F5) {
                         FreePlayerSprites(playerSprites);
                         playerSprites = LoadPlayerSprites(renderer);
+                        FreeEffectSprites(effectSprites);
+                        effectSprites = LoadEffectSprites(renderer);
                     }
 
                     if (e.key.keysym.sym == SDLK_z) {
@@ -374,6 +452,20 @@ int main(int argc, char* argv[]) {
             g_apu.bgmTriangleFreq = step.triFreq;
             g_apu.bgmNoiseTrigger = (step.drumType != 0);
             bgmStep = (bgmStep + 1) % 128;
+        }
+
+        // SOUND TEST 時の BGM 再生
+        if (state == SOUND_TEST && soundTest.playing) {
+            soundTest.frameInStep++;
+            if (soundTest.frameInStep >= 6) { // STAGE1_FRAMES_PER_TICK 相当
+                soundTest.frameInStep = 0;
+                const NoteStep& s = STAGE1_SCORE[soundTest.step];
+                g_apu.bgmPulse1Freq   = s.pulse1Freq;
+                g_apu.bgmPulse2Freq   = s.pulse2Freq;
+                g_apu.bgmTriangleFreq = s.triFreq;
+                g_apu.bgmNoiseTrigger = (s.drumType != 0);
+                soundTest.step = (soundTest.step + 1) % 128;
+            }
         }
 
         if (state == PLAYING) {
@@ -464,6 +556,11 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
+                if (!damaged && orbitalEnemies.HitsPlayer(
+                        player.x, player.y, player.width, player.height)) {
+                    damaged = true;
+                }
+
                 // 被弾確定 → ライフ減算・無敵付与・リスポーン
                 if (damaged) {
                     lives--;
@@ -491,6 +588,18 @@ int main(int argc, char* argv[]) {
             orbitalEnemies.Update(1.0f / 60.0f, player.x + player.width * 0.5f, player.y + player.height * 0.5f,
                                   LOGICAL_WIDTH, PLAY_AREA_HEIGHT);
 
+            // 爆発エフェクトのコマ送り (6 ゲームフレームで 1 コマ、4 コマで消える)
+            for (auto& fx : effects) {
+                if (--fx.timer <= 0) {
+                    fx.timer = 6;
+                    ++fx.frame;
+                }
+            }
+            effects.erase(
+                std::remove_if(effects.begin(), effects.end(),
+                               [](const EffectInstance& e){ return e.frame >= 4; }),
+                effects.end());
+
             // 自機弾の移動および地形衝突 (リング(WEAPON_RING)以外は障害物で消滅)
             for (auto& b : pBullets) {
                 if (!b.active) continue;
@@ -509,14 +618,21 @@ int main(int argc, char* argv[]) {
 
                 // Orbital Enemy: Shield ×3 → Core の順で判定 (Shield に当たった弾は消えるだけ)
                 int orbitalScore = 0;
+                float coreX = 0.0f, coreY = 0.0f;
                 const OrbitalBulletResult orbitalHit =
-                    orbitalEnemies.ResolvePlayerBullet(b.x, b.y, 4.0f, 4.0f, 1, orbitalScore);
+                    orbitalEnemies.ResolvePlayerBullet(
+                        b.x, b.y, 4.0f, 4.0f, 1, orbitalScore, &coreX, &coreY);
                 if (orbitalHit != OrbitalBulletResult::MISS) {
                     b.active = false;
                     if (orbitalHit == OrbitalBulletResult::CORE_DESTROYED) {
                         score += orbitalScore;
                         if (score > highScore) highScore = score;
                         PlaySE_Explosion();
+                        {
+                            const float ex = coreX - effectSprites.cellWidth;
+                            const float ey = coreY - effectSprites.cellHeight;
+                            effects.push_back({ ex, ey, 0, 6 });
+                        }
                     }
                     continue;
                 }
@@ -526,6 +642,12 @@ int main(int argc, char* argv[]) {
                     if (b.x < en.x + en.width && b.x + 4 > en.x &&
                         b.y < en.y + en.height && b.y + 4 > en.y) {
                         b.active = false;
+                        // spawn a 4-frame explosion centered on this enemy
+                        {
+                            const float ex = en.x + en.width  * 0.5f - effectSprites.cellWidth;   // cellWidth*scale/2 with scale=2
+                            const float ey = en.y + en.height * 0.5f - effectSprites.cellHeight;
+                            effects.push_back({ ex, ey, 0, 6 });
+                        }
                         en.active = false;
                         score += 100;
                         if (score > highScore) highScore = score;
@@ -541,9 +663,39 @@ int main(int argc, char* argv[]) {
         if (state == TITLE) {
             DrawText(renderer, "BURAI VIBE APU", 65, 50, 3, {0, 255, 255, 255});
             DrawText(renderer, "STAGE 1 INTEGRATION", 55, 90, 1, {255, 255, 255, 255});
+            DrawText(renderer, "PRESS S FOR SOUND TEST", 55, 160, 1, {180, 180, 180, 255});
             if ((frameCount / 30) % 2 == 0) {
                 DrawText(renderer, "PRESS Z TO START", 80, 140, 1, {255, 255, 0, 255});
             }
+        } else if (state == SOUND_TEST) {
+            DrawText(renderer, "SOUND TESTMODE", 75, 15, 2, {0, 255, 255, 255});
+
+            for (int i = 0; i < SoundTestState::TRACK_COUNT; ++i) {
+                const int y = 45 + i * 14;
+                const bool sel = (i == soundTest.selected);
+                const bool playable = soundTest.IsPlayable(i);
+
+                if (sel) {
+                    SDL_SetRenderDrawColor(renderer, 30, 40, 90, 255);
+                    SDL_Rect bar = { 40, y - 1, 240, 11 };
+                    SDL_RenderFillRect(renderer, &bar);
+                }
+
+                std::string line = (sel ? ">" : " ");
+                line += (i < 9 ? "0" : "") + std::to_string(i + 1) + " ";
+                line += SoundTestState::TrackName(i);
+
+                if (playable) {
+                    if (soundTest.playing && sel) line += " [PLAY]";
+                } else {
+                    line += " [---]";
+                }
+
+                SDL_Color col = sel ? SDL_Color{255, 255, 0, 255} : (playable ? SDL_Color{255, 255, 255, 255} : SDL_Color{100, 100, 100, 255});
+                DrawText(renderer, line, 50, y, 1, col);
+            }
+
+            DrawText(renderer, "UP/DN:SEL Z:PLAY X:STOP ESC:EXIT", 15, 205, 1, {180, 180, 180, 255});
         } else if (state == PLAYING) {
             RenderStage(renderer, stageMap, stageTextures, LOGICAL_WIDTH, PLAY_AREA_HEIGHT, 1);
             RenderHazardChains(renderer, stageMap);
@@ -577,6 +729,9 @@ int main(int argc, char* argv[]) {
                 }
             }
             orbitalEnemies.Render(renderer, frameCount);
+            for (const auto& fx : effects) {
+                DrawEffectFrame(renderer, effectSprites, fx.frame, fx.x, fx.y, 2);
+            }
 
             DrawText(renderer, "ARROWS: MOVE & AIM  Z: SHOOT", 10, 10, 1, {255, 255, 255, 255});
             DrawText(renderer, "1: LASER  2: RING  3: MISSILE", 10, 22, 1, {220, 220, 220, 255});
@@ -632,6 +787,7 @@ int main(int argc, char* argv[]) {
     }
 
     FreePlayerSprites(playerSprites);
+    FreeEffectSprites(effectSprites);
     DestroyStageTextures(stageTextures);
     SDL_CloseAudio();
     SDL_DestroyRenderer(renderer);

@@ -12,7 +12,8 @@
 // OrbitalShieldEnemy = 1 Core + 3 Shields = 4 independent objects = 1 Enemy
 //   - Core (Parent) だけが HP を持つ。HP の正本は core の Part::hp / Part::max_hp だけ
 //   - Shield (Child) ×3 は無敵の Player 弾ブロッカー。HP・死亡・スコアなし
-//   - Shield 座標は毎フレーム Core 中心 + 楕円軌道 (120 度間隔) から作り直す。積分しない
+//   - Shield 座標は毎フレーム Core 中心 + 軌道から作り直す。積分しない
+//   - 配置は十字の 3 方向 (上 / 左 / 下、90 度間隔)。右が空き枠。spawn 時はこの十字で、公転すると十字ごと回る
 //   - どのスプライトも回転させない。回るのは Shield の「座標」だけ
 //
 // REFERENCE 画像の 4 コマは「アニメーションのコマ」であり、ゲーム内の玉の数ではない。
@@ -31,8 +32,9 @@ struct OrbitalShieldTuning {
     float stopDistance = 48.0f;         // px。Core 中心と Player 中心がこれより近ければ止まる
     int coreHp = 12;
 
-    float orbitRadiusX = 24.0f;         // px。X == Y なら円、違えば楕円
-    float orbitRadiusY = 20.0f;         // px
+    // px。X == Y なら円、違えば楕円。25 = Core セル半分 16 + Shield セル半分 8 + 隙間 1 (十字で重ならない最小距離)
+    float orbitRadiusX = 25.0f;
+    float orbitRadiusY = 25.0f;
     float orbitAngularSpeed = 1.2f;     // rad/sec
     float orbitAcceleration = 3.0f;     // rad/sec^2。反転時の減速→逆回転の滑らかさ
     float orbitReverseInterval = 2.5f;  // sec
@@ -79,6 +81,9 @@ public:
     // Shield ×3 → Core の順で判定する。弾の消去と得点加算は呼び出し側が結果を見て行う。
     // bx, by は弾の左上、bw, bh は弾の大きさ
     OrbitalBulletResult resolve_player_bullet(float bx, float by, float bw, float bh, int damage);
+
+    // Read-only Player AABB query against the Core and all three Shields.
+    bool overlaps_player(float px, float py, float pw, float ph) const;
 
     // Parent (Core) だけを基準に画面外判定する (Shield 単独では判定しない)
     void cull_if_offscreen(int cameraX, int cameraY, int viewWidth, int viewHeight);

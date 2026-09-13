@@ -13,6 +13,7 @@ include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${SDL2_TTF_I
 
 add_executable(${PROJECT_NAME} src/main.cpp src/stage.cpp
     src/player_sprite.cpp
+    src/effect_sprite.cpp
     src/player_sprite_contract.cpp
     src/multi_part_entity.cpp
     src/boss_entity.cpp

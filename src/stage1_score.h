@@ -51,6 +51,7 @@ inline NoteStep Harmonized(NoteStep beat) {
     beat.pulse2Mode = Pulse2Mode::Harmony;
     return beat;
 }
+// Pulse 2 cycles the four chord tones once per frame (user-approved exception in CLAUDE.md).
 inline NoteStep Arpeggiated(NoteStep beat, int root, int third, int fifth, int seventh) {
     beat.pulse2Mode = Pulse2Mode::Arpeggio;
     beat.arpeggio[0] = Frequency(root);
@@ -63,81 +64,82 @@ inline NoteStep Arpeggiated(NoteStep beat, int root, int third, int fifth, int s
 
 // Original fixed composition. Q defaults to the one-sixteenth echo macro.
 // Harmonized rows contain explicit simultaneous harmony; Arpeggiated rows own P2.
+// The lead mixes eighths with quarter, dotted and half notes (H ties) so phrases breathe.
 namespace Stage1Composition {
 using namespace Stage1Notes;
 inline const NoteStep STAGE1_SCORE[STAGE1_SCORE_STEPS] = {
 
     // A: harmonic-minor question and answer / delayed echo
-    // 01 Am: hook with a raised seventh and an anticipated A
-    Q(A4,R,R,Kick,H,H,A2,Hat,None,None), Q(E5,R,R,Snare,D5,H,E3,Hat,None,None), Q(C5,R,R,Kick,GS4,H,A2,Hat,None,None), Q(A4,R,R,Snare,A5,H,E3,Hat,None,None),
-    // 02 F -> E7: tie across the barline
-    Q(H,R,R,Kick,H,H,F2,Hat,None,None), Q(F5,R,R,Snare,E5,H,C3,Hat,None,None), Q(E5,R,R,Kick,GS5,H,E2,Hat,None,None), Q(B4,R,R,Snare,F5,H,B2,Hat,None,None),
-    // 03 Dm: answer begins off the previous bar
-    Q(H,R,R,Kick,H,H,D3,Hat,None,None), Q(E5,R,R,Snare,D5,H,A2,Hat,None,None), Q(D5,R,R,Kick,H,H,D3,Hat,None,None), Q(E5,R,R,Snare,GS5,H,A2,Hat,None,None),
-    // 04 E7: descending bass, early tonic pickup
-    Q(H,R,E3,Kick,H,H,D3,Hat,None,None), Q(F5,R,C3,Snare,E5,H,B2,Hat,None,None), Q(D5,R,A2,Kick,B4,H,GS2,Hat,None,None), Q(GS4,R,F2,Snare,A4,H,E2,Hat,None,Fill),
-    // 05 Am: answer inherits its first note by a tie
-    Q(H,R,R,Kick,H,H,A2,Hat,None,None), Q(E5,R,R,Snare,D5,H,E3,Hat,None,None), Q(C5,R,R,Kick,B4,H,A2,Hat,None,None), Q(GS4,R,R,Snare,A4,H,E3,Hat,None,None),
-    // 06 F / Dm: anticipation into the next bar
-    Q(H,R,R,Kick,H,H,F2,Hat,None,None), Q(C5,R,R,Snare,E5,H,C3,Hat,None,None), Q(F5,R,R,Kick,E5,H,F2,Hat,None,None), Q(D5,R,R,Snare,F5,H,C3,Hat,None,None),
-    // 07 Dm -> E7
-    Q(H,R,R,Kick,E5,H,D3,Hat,None,None), Q(D5,R,R,Snare,F5,H,A2,Hat,None,None), Q(GS4,R,R,Kick,H,H,E2,Hat,None,None), Q(B4,R,R,Snare,H,H,B2,Hat,None,None),
+    // 01 Am: two eighths, a quarter, then a held half note
+    Q(A4,R,R,Kick,C5,H,A2,Hat,None,None), Q(E5,R,R,Snare,H,H,E3,Hat,None,None), Q(A5,R,R,Kick,H,H,A2,Hat,None,None), Q(H,R,R,Snare,H,H,E3,Hat,None,None),
+    // 02 F -> E7: half note, quarter, two eighths into the answer
+    Q(F5,R,R,Kick,H,H,F2,Hat,None,None), Q(H,R,R,Snare,H,H,C3,Hat,None,None), Q(E5,R,R,Kick,H,H,E2,Hat,None,None), Q(D5,R,R,Snare,B4,H,B2,Hat,None,None),
+    // 03 Dm: moving answer
+    Q(D5,R,R,Kick,E5,H,D3,Hat,None,None), Q(F5,R,R,Snare,H,H,A2,Hat,None,None), Q(E5,R,R,Kick,D5,H,D3,Hat,None,None), Q(C5,R,R,Snare,H,H,A2,Hat,None,None),
+    // 04 E7: two half notes over the descending bass
+    Q(B4,R,E3,Kick,H,H,D3,Hat,None,None), Q(H,R,C3,Snare,H,H,B2,Hat,None,None), Q(GS4,R,A2,Kick,H,H,GS2,Hat,None,None), Q(H,R,F2,Snare,H,H,E2,Hat,None,Fill),
+    // 05 Am: hook returns, ends on a quarter
+    Q(A4,R,R,Kick,C5,H,A2,Hat,None,None), Q(E5,R,R,Snare,H,H,E3,Hat,None,None), Q(A5,R,R,Kick,H,H,A2,Hat,None,None), Q(E5,R,R,Snare,H,H,E3,Hat,None,None),
+    // 06 F / Dm: half note and two quarters
+    Q(F5,R,R,Kick,H,H,F2,Hat,None,None), Q(H,R,R,Snare,H,H,C3,Hat,None,None), Q(D5,R,R,Kick,H,H,F2,Hat,None,None), Q(F5,R,R,Snare,H,H,C3,Hat,None,None),
+    // 07 Dm -> E7: step down to the leading tone
+    Q(F5,R,R,Kick,E5,H,D3,Hat,None,None), Q(D5,R,R,Snare,H,H,A2,Hat,None,None), Q(B4,R,R,Kick,H,H,E2,Hat,None,None), Q(GS4,R,R,Snare,H,H,B2,Hat,None,None),
     // 08 Am: three-beat tonic and a breath (echo trails one tick)
     Q(A4,R,E3,Kick,H,H,D3,None,None,None), Q(H,R,C3,None,H,H,B2,None,None,None), Q(H,R,A2,None,H,H,H,None,None,None), Q(R,R,R,None,H,H,H,None,None,None),
 
-    // A prime: higher variation / grouped accents
-    // 09 Am: high-register hook, 3+3+2 accents
-    Q(A5,R,R,Kick,H,H,A2,Hat,None,None), Q(E6,R,R,None,D6,H,E3,Snare,None,None), Q(C6,R,R,None,GS5,H,A2,Hat,None,None), Q(A5,R,R,Snare,C6,H,E3,Hat,None,None),
-    // 10 F -> E7
-    Q(H,R,R,Kick,H,H,F2,Hat,None,None), Q(A5,R,R,None,GS5,H,C3,Snare,None,None), Q(F5,R,R,None,E5,H,E2,Hat,None,None), Q(GS5,R,R,Snare,F5,H,B2,Hat,None,None),
+    // A prime: higher variation / grouped accents (melody lands on the 3+3+2 accents)
+    // 09 Am
+    Q(A5,R,R,Kick,H,H,A2,Hat,None,None), Q(H,R,R,None,E6,H,E3,Snare,None,None), Q(H,R,R,None,H,H,A2,Hat,None,None), Q(C6,R,R,Snare,H,H,E3,Hat,None,None),
+    // 10 F -> E7: G sharp anticipates the dominant
+    Q(A5,R,R,Kick,H,H,F2,Hat,None,None), Q(H,R,R,None,GS5,H,C3,Snare,None,None), Q(H,R,R,None,H,H,E2,Hat,None,None), Q(B5,R,R,Snare,H,H,B2,Hat,None,None),
     // 11 Dm
-    Q(H,R,R,Kick,H,H,D3,Hat,None,None), Q(A5,R,R,None,GS5,H,A2,Snare,None,None), Q(F5,R,R,None,E5,H,D3,Hat,None,None), Q(D5,R,R,Snare,GS5,H,A2,Hat,None,None),
-    // 12 E7: one-frame chord macro and descending bass
-    Arpeggiated(Q(H,R,E3,Kick,H,H,D3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(B5,R,C3,None,D6,H,B2,Snare,None,None),E4,GS4,B4,D5), Arpeggiated(Q(E6,R,A2,None,D6,H,GS2,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(B5,R,F2,Snare,A5,H,E2,Hat,None,None),E4,GS4,B4,D5),
+    Q(D6,R,R,Kick,H,H,D3,Hat,None,None), Q(H,R,R,None,A5,H,A2,Snare,None,None), Q(H,R,R,None,H,H,D3,Hat,None,None), Q(F5,R,R,Snare,H,H,A2,Hat,None,None),
+    // 12 E7: held lead over a one-frame chord macro and descending bass
+    Arpeggiated(Q(GS5,R,E3,Kick,H,H,D3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(H,R,C3,None,H,H,B2,Snare,None,None),E4,GS4,B4,D5), Arpeggiated(Q(B5,R,A2,None,H,H,GS2,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(H,R,F2,Snare,H,H,E2,Hat,None,None),E4,GS4,B4,D5),
     // 13 Am: answering variation
-    Q(H,R,R,Kick,H,H,A2,Hat,None,None), Q(E6,R,R,None,D6,H,E3,Snare,None,None), Q(C6,R,R,None,B5,H,A2,Hat,None,None), Q(GS5,R,R,Snare,A5,H,E3,Hat,None,None),
-    // 14 F: raised-seventh tension
-    Q(H,R,R,Kick,H,H,F2,Hat,None,None), Q(G5,R,R,None,F5,H,C3,Snare,None,None), Q(E5,R,R,None,F5,H,F2,Hat,None,None), Q(GS5,R,R,Snare,B5,H,C3,Hat,None,None),
+    Q(A5,R,R,Kick,H,H,A2,Hat,None,None), Q(H,R,R,None,C6,H,E3,Snare,None,None), Q(H,R,R,None,H,H,A2,Hat,None,None), Q(E6,R,R,Snare,H,H,E3,Hat,None,None),
+    // 14 F
+    Q(C6,R,R,Kick,H,H,F2,Hat,None,None), Q(H,R,R,None,A5,H,C3,Snare,None,None), Q(H,R,R,None,H,H,F2,Hat,None,None), Q(F5,R,R,Snare,H,H,C3,Hat,None,None),
     // 15 Dm -> E7
-    Q(F5,R,R,Kick,E5,H,D3,Hat,None,None), Q(D5,R,R,None,F5,H,A2,Snare,None,None), Q(GS5,R,R,None,H,H,E2,Hat,None,None), Q(B5,R,R,Snare,H,H,B2,Hat,None,None),
+    Q(D5,R,R,Kick,E5,H,D3,Hat,None,None), Q(F5,R,R,None,H,H,A2,Snare,None,None), Q(GS5,R,R,None,H,H,E2,Hat,None,None), Q(B5,R,R,Snare,H,H,B2,Hat,None,None),
     // 16 Am -> E7: turn toward F
-    Q(A5,R,F3,Kick,H,H,E3,Hat,None,None), Q(H,R,D3,Snare,E5,H,C3,Hat,None,None), Q(GS5,R,B2,Kick,B5,H,A2,Hat,None,None), Q(E5,R,GS2,Snare,H,H,E2,Fill,Fill,Fill),
+    Q(A5,R,F3,Kick,H,H,E3,Hat,None,None), Q(H,R,D3,Snare,H,H,C3,Hat,None,None), Q(E5,R,B2,Kick,H,H,A2,Hat,None,None), Q(GS5,R,GS2,Snare,H,H,E2,Fill,Fill,Fill),
 
-    // B: paired thirds / release and return to minor
-    // 17 F -> E7: simultaneous upper thirds
-    Harmonized(Q(F5,A5,R,Kick,A5,C6,F2,Hat,None,Hat)), Harmonized(Q(C6,E6,R,Snare,B5,D6,C3,Hat,None,None)), Harmonized(Q(A5,C6,R,Kick,F5,A5,F2,Hat,None,Hat)), Harmonized(Q(E5,GS5,R,Snare,GS5,B5,E2,Hat,None,None)),
+    // B: paired thirds in quarters and half notes / release and return to minor
+    // 17 F -> E7
+    Harmonized(Q(F5,A5,R,Kick,H,H,F2,Hat,None,Hat)), Harmonized(Q(A5,C6,R,Snare,H,H,C3,Hat,None,None)), Harmonized(Q(GS5,B5,R,Kick,H,H,F2,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,E2,Hat,None,None)),
     // 18 E7
-    Harmonized(Q(B5,D6,R,Kick,A5,C6,E2,Hat,None,Hat)), Harmonized(Q(GS5,B5,R,Snare,E5,GS5,B2,Hat,None,None)), Harmonized(Q(B5,D6,R,Kick,D6,F6,E3,Hat,None,Hat)), Harmonized(Q(GS5,B5,R,Snare,B5,D6,B2,Hat,None,None)),
-    // 19 Am
-    Harmonized(Q(C6,E6,R,Kick,B5,D6,A2,Hat,None,Hat)), Harmonized(Q(A5,C6,R,Snare,GS5,B5,E3,Hat,None,None)), Harmonized(Q(E5,GS5,R,Kick,GS5,B5,A2,Hat,None,Hat)), Harmonized(Q(A5,C6,R,Snare,B5,D6,E3,Hat,None,None)),
+    Harmonized(Q(B5,D6,R,Kick,H,H,E2,Hat,None,Hat)), Harmonized(Q(GS5,B5,R,Snare,H,H,B2,Hat,None,None)), Harmonized(Q(B5,D6,R,Kick,H,H,E3,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,B2,Hat,None,None)),
+    // 19 Am: two half notes
+    Harmonized(Q(C6,E6,R,Kick,H,H,A2,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,E3,Hat,None,None)), Harmonized(Q(A5,C6,R,Kick,H,H,A2,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,E3,Hat,None,None)),
     // 20 Dm -> E7: descending bass
-    Harmonized(Q(F5,A5,E3,Kick,A5,C6,D3,Hat,None,Hat)), Harmonized(Q(D6,F6,C3,Snare,C6,E6,B2,Hat,None,None)), Harmonized(Q(B5,D6,A2,Kick,A5,C6,GS2,Hat,None,Hat)), Harmonized(Q(GS5,B5,F2,Snare,E5,GS5,E2,Hat,None,None)),
+    Harmonized(Q(D6,F6,E3,Kick,H,H,D3,Hat,None,Hat)), Harmonized(Q(A5,C6,C3,Snare,H,H,B2,Hat,None,None)), Harmonized(Q(B5,D6,A2,Kick,H,H,GS2,Hat,None,Hat)), Harmonized(Q(GS5,B5,F2,Snare,H,H,E2,Hat,None,None)),
     // 21 C: brief relative-major summit
-    Harmonized(Q(E5,G5,R,Kick,G5,B5,C3,Hat,None,Hat)), Harmonized(Q(C6,E6,R,Snare,D6,F6,G2,Hat,None,None)), Harmonized(Q(E6,G6,R,Kick,D6,F6,C3,Hat,None,Hat)), Harmonized(Q(C6,E6,R,Snare,G5,B5,G2,Hat,None,None)),
-    // 22 F: harmonic-minor inflection
-    Harmonized(Q(A5,C6,R,Kick,G5,B5,F2,Hat,None,Hat)), Harmonized(Q(F5,A5,R,Snare,E5,GS5,C3,Hat,None,None)), Harmonized(Q(F5,A5,R,Kick,GS5,B5,F2,Hat,None,Hat)), Harmonized(Q(A5,C6,R,Snare,C6,E6,C3,Hat,None,None)),
+    Harmonized(Q(C6,E6,R,Kick,H,H,C3,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,G2,Hat,None,None)), Harmonized(Q(E6,G6,R,Kick,H,H,C3,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,G2,Hat,None,None)),
+    // 22 F
+    Harmonized(Q(D6,F6,R,Kick,H,H,F2,Hat,None,Hat)), Harmonized(Q(C6,E6,R,Snare,H,H,C3,Hat,None,None)), Harmonized(Q(A5,C6,R,Kick,H,H,F2,Hat,None,Hat)), Harmonized(Q(H,H,R,Snare,H,H,C3,Hat,None,None)),
     // 23 Dm -> E7
-    Harmonized(Q(A5,C6,R,Kick,F5,A5,D3,Hat,None,Hat)), Harmonized(Q(D5,F5,R,Snare,F5,A5,A2,Hat,None,None)), Harmonized(Q(B5,D6,R,Kick,D6,F6,E2,Hat,None,Hat)), Harmonized(Q(GS5,B5,R,Snare,B5,D6,B2,Hat,None,Fill)),
-    // 24 Am: chorus resolution
-    Harmonized(Q(A5,C6,E3,Kick,H,H,D3,Hat,None,None)), Harmonized(Q(H,H,C3,Snare,H,H,B2,Hat,None,None)), Harmonized(Q(E5,GS5,A2,Kick,C5,E5,H,Hat,None,None)), Harmonized(Q(A4,C5,H,None,H,H,H,None,None,None)),
+    Harmonized(Q(F5,A5,R,Kick,H,H,D3,Hat,None,Hat)), Harmonized(Q(A5,C6,R,Snare,H,H,A2,Hat,None,None)), Harmonized(Q(B5,D6,R,Kick,H,H,E2,Hat,None,Hat)), Harmonized(Q(GS5,B5,R,Snare,H,H,B2,Hat,None,Fill)),
+    // 24 Am: chorus resolution in two half notes
+    Harmonized(Q(A5,C6,E3,Kick,H,H,D3,Hat,None,None)), Harmonized(Q(H,H,C3,Snare,H,H,B2,Hat,None,None)), Harmonized(Q(A4,C5,A2,Kick,H,H,H,Hat,None,None)), Harmonized(Q(H,H,H,None,H,H,H,None,None,None)),
 
     // Connection: echo and E7 arpeggios / loop pickup
-    // 25 Am: offbeat bass and anticipations
-    Q(A4,R,R,Kick,H,H,A3,Hat,None,None), Q(C5,R,R,Snare,E5,H,E3,Hat,None,None), Q(GS5,R,R,Kick,H,H,A3,Hat,None,None), Q(E5,R,R,Snare,F5,H,E3,Hat,None,None),
-    // 26 Dm
-    Q(H,R,R,Kick,E5,H,A3,Hat,None,None), Q(D5,R,R,Snare,H,H,A3,Hat,None,None), Q(F5,R,R,Kick,E5,H,A3,Hat,None,None), Q(D5,R,R,Snare,A5,H,A3,Hat,None,None),
+    // 25 Am: quarter-note walk up
+    Q(A4,R,R,Kick,H,H,A3,Hat,None,None), Q(C5,R,R,Snare,H,H,E3,Hat,None,None), Q(E5,R,R,Kick,H,H,A3,Hat,None,None), Q(A5,R,R,Snare,H,H,E3,Hat,None,None),
+    // 26 Dm: two half notes
+    Q(F5,R,R,Kick,H,H,A3,Hat,None,None), Q(H,R,R,Snare,H,H,A3,Hat,None,None), Q(D5,R,R,Kick,H,H,A3,Hat,None,None), Q(H,R,R,Snare,H,H,A3,Hat,None,None),
     // 27 F -> E7
-    Q(H,R,R,Kick,GS5,H,F3,Hat,None,None), Q(F5,R,R,Snare,H,H,F3,Hat,None,None), Q(E5,R,R,Kick,GS5,H,F3,Hat,None,None), Q(B4,R,R,Snare,GS5,H,F3,Hat,None,None),
-    // 28 E7: fast chord macro
-    Arpeggiated(Q(GS5,R,E3,Kick,H,H,D3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(E5,R,C3,Snare,H,H,B2,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(D5,R,A2,Kick,H,H,GS2,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(B4,R,F2,Snare,H,H,E2,Fill,None,Fill),E4,GS4,B4,D5),
+    Q(C5,R,R,Kick,H,H,F3,Hat,None,None), Q(F5,R,R,Snare,H,H,F3,Hat,None,None), Q(E5,R,R,Kick,H,H,F3,Hat,None,None), Q(B4,R,R,Snare,H,H,F3,Hat,None,None),
+    // 28 E7: held lead over the fast chord macro
+    Arpeggiated(Q(GS4,R,E3,Kick,H,H,D3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(H,R,C3,Snare,H,H,B2,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(B4,R,A2,Kick,H,H,GS2,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(H,R,F2,Snare,H,H,E2,Fill,None,Fill),E4,GS4,B4,D5),
     // 29 Am
-    Q(C5,R,R,Kick,E5,H,A3,Hat,None,None), Q(GS5,R,R,Snare,A5,H,E3,Hat,None,None), Q(H,R,R,Kick,E5,H,A3,Hat,None,None), Q(C5,R,R,Snare,F5,H,E3,Hat,None,None),
+    Q(A4,R,R,Kick,C5,H,A3,Hat,None,None), Q(E5,R,R,Snare,H,H,E3,Hat,None,None), Q(A5,R,R,Kick,H,H,A3,Hat,None,None), Q(H,R,R,Snare,H,H,E3,Hat,None,None),
     // 30 F -> Dm
-    Q(H,R,R,Kick,E5,H,F3,Hat,None,None), Q(D5,R,R,Snare,H,H,F3,Hat,None,None), Q(F5,R,R,Kick,E5,H,A3,Hat,None,None), Q(D5,R,R,Snare,B4,H,A3,Hat,None,None),
-    // 31 E7: chord macro and drum build
-    Arpeggiated(Q(B4,R,R,Kick,H,H,E3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(D5,R,R,Snare,H,H,E3,Hat,None,Fill),E4,GS4,B4,D5), Arpeggiated(Q(E5,R,R,Kick,H,H,E3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(GS5,R,R,Snare,H,H,E3,Fill,Fill,Fill),E4,GS4,B4,D5),
-    // 32 E7: descending bass, G sharp pickup into A
-    Arpeggiated(Q(B5,R,E3,Kick,H,H,D3,Hat,None,Fill),E4,GS4,B4,D5), Arpeggiated(Q(GS5,R,C3,Snare,H,H,B2,Fill,None,Fill),E4,GS4,B4,D5), Arpeggiated(Q(E5,R,A2,Fill,GS5,H,GS2,Fill,Fill,Fill),E4,GS4,B4,D5), Arpeggiated(Q(B4,R,F2,Fill,GS4,H,E2,Fill,Fill,Fill),E4,GS4,B4,D5),
+    Q(F5,R,R,Kick,H,H,F3,Hat,None,None), Q(H,R,R,Snare,H,H,F3,Hat,None,None), Q(D5,R,R,Kick,H,H,A3,Hat,None,None), Q(F5,R,R,Snare,H,H,A3,Hat,None,None),
+    // 31 E7: chord macro and drum build, lead climbs in quarters
+    Arpeggiated(Q(E5,R,R,Kick,H,H,E3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(GS5,R,R,Snare,H,H,E3,Hat,None,Fill),E4,GS4,B4,D5), Arpeggiated(Q(B5,R,R,Kick,H,H,E3,Hat,None,None),E4,GS4,B4,D5), Arpeggiated(Q(H,R,R,Snare,H,H,E3,Fill,Fill,Fill),E4,GS4,B4,D5),
+    // 32 E7: dotted half into the G sharp pickup back to A
+    Arpeggiated(Q(H,R,E3,Kick,H,H,D3,Hat,None,Fill),E4,GS4,B4,D5), Arpeggiated(Q(GS5,R,C3,Snare,H,H,B2,Fill,None,Fill),E4,GS4,B4,D5), Arpeggiated(Q(E5,R,A2,Fill,H,H,GS2,Fill,Fill,Fill),E4,GS4,B4,D5), Arpeggiated(Q(B4,R,F2,Fill,GS4,H,E2,Fill,Fill,Fill),E4,GS4,B4,D5),
 };
 } // namespace Stage1Composition
 using Stage1Composition::STAGE1_SCORE;

@@ -31,15 +31,27 @@ void OrbitalEnemyField::Update(float dt, float playerCenterX, float playerCenter
 }
 
 OrbitalBulletResult OrbitalEnemyField::ResolvePlayerBullet(float bx, float by, float bw, float bh, int damage,
-                                                           int& scoreOut) {
+                                                           int& scoreOut, float* coreXOut, float* coreYOut) {
     scoreOut = 0;
     for (auto& enemy : impl_->enemies) {
         const OrbitalBulletResult result = enemy->resolve_player_bullet(bx, by, bw, bh, damage);
         if (result == OrbitalBulletResult::MISS) continue;
-        if (result == OrbitalBulletResult::CORE_DESTROYED) scoreOut = enemy->tuning().scoreValue;
+        if (result == OrbitalBulletResult::CORE_DESTROYED) {
+            scoreOut = enemy->tuning().scoreValue;
+            // 死亡直後でも Core の部位は次の Update で取り除かれるまで有効
+            if (coreXOut) *coreXOut = enemy->core().world_x;
+            if (coreYOut) *coreYOut = enemy->core().world_y;
+        }
         return result;
     }
     return OrbitalBulletResult::MISS;
+}
+
+bool OrbitalEnemyField::HitsPlayer(float px, float py, float pw, float ph) const {
+    for (const auto& enemy : impl_->enemies) {
+        if (enemy->overlaps_player(px, py, pw, ph)) return true;
+    }
+    return false;
 }
 
 void OrbitalEnemyField::Render(SDL_Renderer* renderer, uint32_t frameCount) const {
