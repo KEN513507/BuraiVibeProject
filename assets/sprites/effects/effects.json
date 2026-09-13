@@ -1,0 +1,13 @@
+{
+  "contract_version": 1,
+  "cell_width": 16,
+  "cell_height": 16,
+  "max_opaque_colors_per_sprite": 3,
+  "palette": ["#FCFCFC", "#F83800", "#A80020"],
+  "frames": [
+    "explosion_0.png",
+    "explosion_1.png",
+    "explosion_2.png",
+    "explosion_3.png"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "contract_version": 1,
+  "cell_width": 32,
+  "cell_height": 32,
+  "max_opaque_colors_per_sprite": 3,
+  "palette": ["#0000BC", "#FCFCFC", "#A80020"],
+  "directions": {
+    "right":      "player_right.png",
+    "up_right":   "player_up_right.png",
+    "up":         "player_up.png",
+    "up_left":    "player_up_left.png",
+    "left":       "player_left.png",
+    "down_left":  "player_down_left.png",
+    "down":       "player_down.png",
+    "down_right": "player_down_right.png"
+  },
+  "reference_only": [
+    "sprite_output/sheet_8dir_47b88223.png"
+  ]
+}
